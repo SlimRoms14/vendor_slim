@@ -21,6 +21,7 @@ Additional SlimRoms functions:
 - repolastsync:    Prints date and time of last repo sync.
 - reposync:        Parallel repo sync using ionice and SCHED_BATCH.
 - repopick:        Utility to fetch changes from Gerrit.
+- sort-blobs-list: Sort proprietary-files.txt sections with LC_ALL=C.
 - installboot:     Installs a boot.img to the connected device.
 - installrecovery: Installs a recovery.img to the connected device.
 EOF
@@ -233,12 +234,12 @@ function breakfast()
 {
     target=$1
     local variant=$2
+
     if [ $# -eq 0 ]; then
         # No arguments, so let's have the full menu
         lunch
     else
-        echo "z$target" | grep -q "-"
-        if [ $? -eq 0 ]; then
+        if [[ "$target" =~ -(user|userdebug|eng)$ ]]; then
             # A buildtype was specified, assume a full device name
             lunch $target
         else
@@ -438,8 +439,7 @@ function installboot()
             return 1
         fi
     fi
-    adb start-server
-    adb wait-for-online
+    adb wait-for-device-recovery
     adb root
     sleep 1
     adb wait-for-online shell mount /system 2>&1 > /dev/null

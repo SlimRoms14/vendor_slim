@@ -1,5 +1,5 @@
 // Copyright 2015 Google Inc. All rights reserved.
-// Copyright (C) 2018 The LineageOS Project
+// Copyright (C) 2018,2021 The LineageOS Project
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -24,14 +24,11 @@ import (
 	"github.com/google/blueprint/proptools"
 
 	"android/soong/android"
-	"android/soong/shared"
 	"path/filepath"
 )
 
 func init() {
 	android.RegisterModuleType("slim_generator", GeneratorFactory)
-
-	pctx.HostBinToolVariable("sboxCmd", "sbox")
 }
 
 var String = proptools.String
@@ -121,9 +118,8 @@ func (g *Module) DepsMutator(ctx android.BottomUpMutatorContext) {
 	android.ExtractSourcesDeps(ctx, g.properties.Tool_files)
 	if g, ok := ctx.Module().(*Module); ok {
 		if len(g.properties.Tools) > 0 {
-			ctx.AddFarVariationDependencies([]blueprint.Variation{
-				{"arch", ctx.Config().BuildOsVariant},
-			}, hostToolDepTag, g.properties.Tools...)
+			ctx.AddFarVariationDependencies(ctx.Config().BuildOSTarget.Variations(),
+				hostToolDepTag, g.properties.Tools...)
 		}
 	}
 }
@@ -151,8 +147,6 @@ func (g *Module) GenerateAndroidBuildActions(ctx android.ModuleContext) {
 	if len(g.properties.Tools) > 0 {
 		ctx.VisitDirectDepsBlueprint(func(module blueprint.Module) {
 			switch ctx.OtherModuleDependencyTag(module) {
-			case android.SourceDepTag:
-				// Nothing to do
 			case hostToolDepTag:
 				tool := ctx.OtherModuleName(module)
 				var path android.OptionalPath
@@ -190,7 +184,9 @@ func (g *Module) GenerateAndroidBuildActions(ctx android.ModuleContext) {
 					ctx.ModuleErrorf("host tool %q missing output file", tool)
 				}
 			default:
-				ctx.ModuleErrorf("unknown dependency on %q", ctx.OtherModuleName(module))
+				if !android.IsSourceDepTagWithOutputTag(ctx.OtherModuleDependencyTag(module), "") {
+					ctx.ModuleErrorf("unknown dependency on %q", ctx.OtherModuleName(module))
+				}
 			}
 		})
 	}
@@ -246,7 +242,7 @@ func (g *Module) GenerateAndroidBuildActions(ctx android.ModuleContext) {
 				return tools[toolFiles[0].Rel()].String(), nil
 			}
 		case "genDir":
-			return "__SBOX_OUT_DIR__", nil
+			return android.PathForModuleGen(ctx).String(), nil
 		default:
 			if strings.HasPrefix(name, "location ") {
 				label := strings.TrimSpace(strings.TrimPrefix(name, "location "))
@@ -268,33 +264,23 @@ func (g *Module) GenerateAndroidBuildActions(ctx android.ModuleContext) {
 	// Dummy output dep
 	dummyDep := android.PathForModuleGen(ctx, ".dummy_dep")
 
-	// tell the sbox command which directory to use as its sandbox root
-	buildDir := android.PathForOutput(ctx).String()
-	sandboxPath := shared.TempDirForOutDir(buildDir)
-
 	genDir := android.PathForModuleGen(ctx)
-	// Escape the command for the shell
-	rawCommand = "'" + strings.Replace(rawCommand, "'", `'\''`, -1) + "'"
-	sandboxCommand := fmt.Sprintf("$sboxCmd --sandbox-path %s --output-root %s --copy-all-output -c %s && touch %s",
-		sandboxPath, genDir, rawCommand, dummyDep.String())
+	manifestPath := android.PathForModuleOut(ctx, "generator.sbox.textproto")
 
-	ruleParams := blueprint.RuleParams{
-		Command:     sandboxCommand,
-		CommandDeps: []string{"$sboxCmd"},
-	}
-	g.rule = ctx.Rule(pctx, "generator", ruleParams)
+	// Use a RuleBuilder to create a rule that runs the command inside an sbox sandbox.
+	rule := android.NewRuleBuilder(pctx, ctx).Sbox(genDir, manifestPath).SandboxTools()
 
-	params := android.BuildParams{
-		Rule:        g.rule,
-		Description: "generate",
-		Output:      dummyDep,
-		Inputs:      g.inputDeps,
-		Implicits:   g.implicitDeps,
-	}
+	rule.Command().
+		Text(rawCommand).
+		ImplicitOutput(dummyDep).
+		Implicits(g.inputDeps).
+		Implicits(g.implicitDeps)
+
+	rule.Command().Text("touch").Output(dummyDep)
 
 	g.outputDeps = append(g.outputDeps, dummyDep)
 
-	ctx.Build(pctx, params)
+	rule.Build("generator", "generate")
 }
 
 func NewGenerator() *Module {

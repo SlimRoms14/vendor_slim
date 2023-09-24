@@ -26,10 +26,12 @@ endif
 
 SLIM_TARGET_PACKAGE := $(PRODUCT_OUT)/$(SLIM_MOD_VERSION).zip
 
+SHA256 := prebuilts/build-tools/path/$(HOST_PREBUILT_TAG)/sha256sum
+
 .PHONY: bacon
 bacon: $(INTERNAL_OTA_PACKAGE_TARGET)
 	$(hide) ln -f $(INTERNAL_OTA_PACKAGE_TARGET) $(SLIM_TARGET_PACKAGE)
-	$(hide) $(MD5SUM) $(SLIM_TARGET_PACKAGE) | sed "s|$(PRODUCT_OUT)/||" > $(SLIM_TARGET_PACKAGE).md5sum
+	$(hide) $(SHA256) $(SLIM_TARGET_PACKAGE) | sed "s|$(PRODUCT_OUT)/||" > $(SLIM_TARGET_PACKAGE).sha256sum
 	@echo -e " "
 	@echo -e ${CL_SLIM}" "${CL_SLIM}
 	@echo -e ${CL_SLIM}"                              _______________________________________________  "${CL_SLIM}

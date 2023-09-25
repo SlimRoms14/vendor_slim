@@ -53,7 +53,7 @@ endif
 
 # SLIM-specific init file
 PRODUCT_COPY_FILES += \
-    vendor/slim/prebuilt/common/etc/init.slim.rc:$(TARGET_COPY_OUT_SYSTEM_EXT)/etc/init/init.slim.rc
+    vendor/slim/prebuilt/common/etc/init/init.slim.rc:$(TARGET_COPY_OUT_SYSTEM_EXT)/etc/init/init.slim.rc
 # Enable Android Beam on all targets
 PRODUCT_COPY_FILES += \
     vendor/slim/config/permissions/android.software.nfc.beam.xml:$(TARGET_COPY_OUT_PRODUCT)/etc/permissions/android.software.nfc.beam.xml
@@ -95,11 +95,6 @@ PRODUCT_PACKAGES += \
     BluetoothExt \
     WallpaperPicker
 #    SlimFileManager removed until updated
-
-#ifneq ($(DISABLE_SLIM_FRAMEWORK), true)
-## Slim Framework
-#include frameworks/slim/slim_framework.mk
-#endif
 
 ## Don't compile SystemUITests
 EXCLUDE_SYSTEMUI_TESTS := true
@@ -145,6 +140,18 @@ PRODUCT_PACKAGES += \
     sshd_config \
     ssh-keygen \
     start-ssh
+
+PRODUCT_COPY_FILES += \
+    vendor/slim/prebuilt/common/etc/init/init.openssh.rc:$(TARGET_COPY_OUT_PRODUCT)/etc/init/init.openssh.rc
+
+# rsync
+PRODUCT_PACKAGES += \
+    rsync
+
+PRODUCT_ENFORCE_RRO_EXCLUDED_OVERLAYS += vendor/slim/overlay/no-rro
+PRODUCT_PACKAGE_OVERLAYS += \
+    vendor/slim/overlay/common \
+    vendor/slim/overlay/no-rro
 
 EXTENDED_POST_PROCESS_PROPS := vendor/slim/tools/slim_process_props.py
 

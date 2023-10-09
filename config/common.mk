@@ -54,9 +54,6 @@ endif
 # SLIM-specific init file
 PRODUCT_COPY_FILES += \
     vendor/slim/prebuilt/common/etc/init/init.slim.rc:$(TARGET_COPY_OUT_SYSTEM_EXT)/etc/init/init.slim.rc
-# Enable Android Beam on all targets
-PRODUCT_COPY_FILES += \
-    vendor/slim/config/permissions/android.software.nfc.beam.xml:$(TARGET_COPY_OUT_PRODUCT)/etc/permissions/android.software.nfc.beam.xml
 
 # Enable SIP+VoIP on all targets
 PRODUCT_COPY_FILES += \

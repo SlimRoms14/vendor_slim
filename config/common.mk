@@ -85,7 +85,7 @@ endif
 # Extra Optional packages
 PRODUCT_PACKAGES += \
     bootanimation.zip \
-    SlimLauncher \
+    CatapultQuickStep \
     SlimWallpaperResizer \
     SlimWallpapers \
     LatinIME \
@@ -144,6 +144,8 @@ PRODUCT_COPY_FILES += \
 # rsync
 PRODUCT_PACKAGES += \
     rsync
+
+include vendor/slim/config/slim_framework.mk
 
 PRODUCT_ENFORCE_RRO_EXCLUDED_OVERLAYS += vendor/slim/overlay/no-rro
 PRODUCT_PACKAGE_OVERLAYS += \

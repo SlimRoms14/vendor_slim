@@ -37,14 +37,13 @@ if len(sys.argv) > 2:
 else:
     depsonly = None
 
-custom_local_manifest = ".repo/local_manifests/slim_manifest.xml"
-custom_default_revision = "10.0"
-custom_dependencies = "slim.dependencies"
-org_manifest = "SlimRoms"  # leave empty if org is provided in manifest
-org_display = "SlimRoms"  # needed for displaying
+try:
+    device = product[product.index("_") + 1:]
+except:
+    device = product
 
 if not depsonly:
-    print("Device %s not found. Attempting to retrieve device repository from LineageOS Github (http://github.com/LineageOS)." % device)
+    print("Device %s not found. Attempting to retrieve device repository from SlimRoms Github (http://github.com/SlimRoms14)." % device)
 
 repositories = []
 
@@ -64,7 +63,7 @@ def add_auth(githubreq):
         githubreq.add_header("Authorization","Basic %s" % githubauth)
 
 if not depsonly:
-    githubreq = urllib.request.Request("https://raw.githubusercontent.com/SlimRoms/mirror/master/default.xml")
+    githubreq = urllib.request.Request("https://raw.githubusercontent.com/SlimRoms14/mirror/main/default.xml")
     try:
         result = ElementTree.fromstring(urllib.request.urlopen(githubreq).read().decode())
     except urllib.error.URLError:
@@ -74,7 +73,7 @@ if not depsonly:
         print("Failed to parse return data from GitHub")
         sys.exit(1)
     for res in result.findall('.//project'):
-        repositories.append(res.attrib['name'][10:])
+        repositories.append(res.attrib['name'][11:])
 
 local_manifests = r'.repo/local_manifests'
 if not os.path.exists(local_manifests): os.makedirs(local_manifests)
@@ -115,8 +114,8 @@ def get_manifest_path():
         return ".repo/manifests/{}".format(m.find("include").get("name"))
 
 def get_default_revision():
-    m = ElementTree.parse(get_manifest_path())
-    d = m.findall('default')[0]
+    m = ElementTree.parse(".repo/manifests/slim.xml")
+    d = [x for x in m.findall('remote') if x.get("name") == "slim"][0]
     r = d.get('revision')
     return r.replace('refs/heads/', '').replace('refs/tags/', '')
 
@@ -129,9 +128,10 @@ def get_from_manifest(devicename):
             lm = ElementTree.Element("manifest")
 
         for localpath in lm.findall("project"):
-            if re.search("/device/.*_%s$" % device, localpath.get("name")):
+            if re.search("device_.*_%s$" % device, localpath.get("name")):
                 return localpath.get("path")
 
+    return None
 
 def is_in_manifest(projectpath):
     for path in glob.glob(".repo/local_manifests/*.xml"):
@@ -156,7 +156,7 @@ def is_in_manifest(projectpath):
         if localpath.get("path") == projectpath:
             return True
 
-    # ... and don't forget the lineage snippet
+    # ... and don't forget the slim snippet
     try:
         lm = ElementTree.parse(".repo/manifests/slim.xml")
         lm = lm.getroot()
@@ -182,14 +182,14 @@ def add_to_manifest(repositories):
         repo_revision = repository['branch']
         print('Checking if %s is fetched from %s' % (repo_target, repo_name))
         if is_in_manifest(repo_target):
-            print('%s already fetched to %s' % (repo_name, repo_target))
+            print('SlimRoms14/%s already fetched to %s' % (repo_name, repo_target))
             continue
 
-        print('Adding dependency: SlimRoms/%s -> %s' % (repo_name, repo_target))
+        print('Adding dependency: SlimRoms14/%s -> %s' % (repo_name, repo_target))
         project = ElementTree.Element("project", attrib = {
             "path": repo_target,
-            "remote": "github",
-            "name": "LineageOS/%s" % repo_name,
+            "remote": "slim",
+            "name": "SlimRoms14/%s" % repo_name,
             "revision": repo_revision })
         lm.append(project)
 
@@ -247,9 +247,9 @@ def get_default_revision_no_minor():
 def get_default_or_fallback_revision(repo_name):
     default_revision = get_default_revision()
     print("Default revision: %s" % default_revision)
-    print("Checking branch info")
+    print("Checking branch info", repo_name)
 
-    githubreq = urllib.request.Request("https://api.github.com/repos/LineageOS/" + repo_name + "/branches")
+    githubreq = urllib.request.Request("https://api.github.com/repos/SlimRoms14/" + repo_name + "/branches")
     add_auth(githubreq)
     result = json.loads(urllib.request.urlopen(githubreq).read().decode())
     if has_branch(result, default_revision):
@@ -282,10 +282,10 @@ if depsonly:
 
 else:
     for repo_name in repositories:
-        if re.match(r"^android_device_[^_]*_" + device + "$", repo_name):
+        if re.match(r"^device_[^_]*_" + device + "$", repo_name):
             print("Found repository: %s" % repo_name)
             
-            manufacturer = repo_name.replace("android_device_", "").replace("_" + device, "")
+            manufacturer = repo_name.replace("device_", "").replace("_" + device, "")
             repo_path = "device/%s/%s" % (manufacturer, device)
             revision = get_default_or_fallback_revision(repo_name)
 
@@ -300,4 +300,4 @@ else:
             print("Done")
             sys.exit()
 
-print("Repository for %s not found in the SlimRoms Github repository list. If this is in error, you may need to manually add it to your local_manifests/roomservice.xml." % device)
+print("Repository for %s not found in the SlimRoms14 Github repository list. If this is in error, you may need to manually add it to your local_manifests/roomservice.xml." % device)

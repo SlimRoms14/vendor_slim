@@ -55,6 +55,22 @@ function slim_add_hmm_entry()
     slim_append_hmm "$1" "$2"
 }
 
+function slimfork()
+{
+    local proj project
+
+    if ! git rev-parse &> /dev/null; then
+        echo "Not in a git directory. Please run this from an Android repository you wish to fork."
+        return
+    fi
+    proj="$(pwd -P | sed "s#$ANDROID_BUILD_TOP/##g")"
+    project="${proj//\//_}"
+    gh repo create SlimRoms14/$project --public
+    slimremote
+    git push slim HEAD:refs/heads/14
+
+}
+
 function slimremote()
 {
     local proj pfx project
@@ -68,13 +84,9 @@ function slimremote()
 
     proj="$(pwd -P | sed "s#$ANDROID_BUILD_TOP/##g")"
 
-    if (echo "$proj" | egrep -q 'external|system|build|bionic|art|libcore|prebuilt|dalvik') ; then
-        pfx="android_"
-    fi
-
     project="${proj//\//_}"
 
-    git remote add slim "git@github.com:SlimRoms/$pfx$project"
+    git remote add slim "git@github.com:SlimRoms14/$pfx$project"
     echo "Remote 'slim' created"
 }
 
@@ -93,7 +105,7 @@ function losremote()
     pfx="android_"
     project="${proj//\//_}"
 
-    if (echo "$project" | egrep -q 'display-caf|audio-caf|media-caf|ril-caf|wlan-caf|bt-caf') ; then
+    if (echo "$project" | grep -E -q 'display-caf|audio-caf|media-caf|ril-caf|wlan-caf|bt-caf') ; then
     project=${project%-caf*}
     fi
 
